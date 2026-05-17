@@ -1,0 +1,4 @@
+name: ppt-master
+description: Generate editable PPTX decks using this repository's local PPT Master workflow.
+instructions: |
+  Read skills/ppt-master/SKILL.md first, then follow the project-local PPT Master workflow exactly.
