@@ -129,7 +129,7 @@ The assembled prompt is **one cohesive paragraph**, not a bulleted list of tags.
 
 ### Step 4 — Write the manifest and generate
 
-Write `project/images/image_prompts.json` per §6. Then run `image_gen.py --manifest` (§7 Path A). The CLI iterates `items[]`, writes status back, and re-renders the Markdown sidecar.
+Write `project/images/image_prompts.json` per §6. Then execute the selected generation path in §7. Codex sessions use Path B by default; Path A (`image_gen.py --manifest`) is for non-Codex/API runs.
 
 ---
 
@@ -274,17 +274,19 @@ C (AI-generated) supports three implementation modes sharing one `image_prompts.
 
 | Trigger | Mode | Mechanism |
 |---|---|---|
-| **Default** — `IMAGE_BACKEND` configured | **Path A**: `image_gen.py --manifest` | One command runs the whole manifest with concurrency; status writes back per item |
-| **Path A unavailable/fails OR User explicitly names host tool** | **Path B**: Host-native tool | Agent invokes the host's image capability; outputs land at `project/images/<filename>` |
+| **Codex session** | **Path B**: Host-native tool | Agent invokes Codex image generation; outputs land at `project/images/<filename>` |
+| **Non-Codex default** — `IMAGE_BACKEND` configured | **Path A**: `image_gen.py --manifest` | One command runs the whole manifest with concurrency; status writes back per item |
+| **Path A unavailable/fails OR user explicitly names host tool** | **Path B**: Host-native tool | Agent invokes the host's image capability; outputs land at `project/images/<filename>` |
 | **Both Path A and Path B fail/unavailable** | **Offline Manual Mode** | Manifest stays on disk; user generates externally from `items[].prompt` and places files at `project/images/<filename>` |
 
 **Selection logic** (automatic, no user prompting):
 
-1. User explicitly named Path B → use Path B
-2. Otherwise check `IMAGE_BACKEND` (env or `.env`)
+1. Running inside Codex → use Path B, even if `IMAGE_BACKEND` is configured
+2. User explicitly named Path B → use Path B
+3. Otherwise check `IMAGE_BACKEND` (env or `.env`)
    - configured → use Path A. If Path A fails twice in a row, automatically fall back to Path B.
    - not configured → skip Path A, automatically fall back to Path B.
-3. If Path B also fails or the host lacks native image generation → fall through to Offline Manual Mode.
+4. If Path B also fails or the host lacks native image generation → fall through to Offline Manual Mode.
 
 **Hard rule**: Step 4 is execution, not re-decision. Never present an interactive choice between paths here — image strategy was locked in Strategist Step 4 h item.
 
@@ -344,14 +346,16 @@ Precedence:
 - Interrupting mid-run is safe — completed items keep `status: Generated` and are skipped on re-run
 - On normal completion the Markdown sidecar is re-rendered automatically; if the run is interrupted, run `--render-md` manually to refresh the sidecar
 
-### Path B — Host-Native Image Tool (On Explicit User Request)
+### Path B — Host-Native Image Tool (Codex Default)
 
-Triggered only when the user explicitly asks the skill to use the host's built-in image generation (e.g. Codex, Antigravity, or any other host that provides a native image tool).
+Triggered when running inside Codex, when the user explicitly asks the skill to use the host's built-in image generation, or when Path A is unavailable and another host provides a native image tool.
 
 - Agent invokes the host's native image tool directly; prompts come from `items[].prompt`
 - Outputs **must** land at `project/images/<filename-from-resource-list>` with dimensions matching the Image Resource List
 - After each placement, set the corresponding item's `status` to `Generated` in the manifest
 - Executor downstream is path-agnostic — no spec change required between Path A and Path B
+
+**Codex rule**: Do not call `image_gen.py` for in-pipeline `Acquire Via: ai` rows unless the user explicitly asks to use a configured API backend. Keep `image_gen.py --manifest` available for non-Codex agents and API/backend runs only.
 
 ### Offline Manual Mode (C's third implementation mode)
 
@@ -428,7 +432,7 @@ Diagnose the failure category, adjust the **one specific dimension** responsible
 **Variant workflow**:
 
 1. Set the unsatisfactory item's `status` back to `Pending` and update its `prompt` in place
-2. Re-run `image_gen.py --manifest` — only that item is re-processed
+2. Re-run the selected generation path from §7 — Codex sessions use Path B; Path A re-processes only `Pending` / `Failed` items
 3. To try multiple stylistic approaches, append additional items with distinct filenames (e.g. `cover_bg_v2.png`) rather than overwriting
 
 ---

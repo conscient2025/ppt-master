@@ -31,6 +31,7 @@ PPT Master is an AI-driven presentation generation system. Multi-role collaborat
 - Canvas choices live in [`skills/ppt-master/references/canvas-formats.md`](skills/ppt-master/references/canvas-formats.md).
 - Icon library details live in [`skills/ppt-master/templates/icons/README.md`](skills/ppt-master/templates/icons/README.md).
 - Before editing prompt files under `skills/ppt-master/references/` or Python under `skills/ppt-master/scripts/`, consult the matching style rule in [`docs/rules/`](docs/rules/).
+- In Codex sessions, `Acquire Via: ai` image rows should use Codex host-native image generation by default, not `image_gen.py`; still write and maintain `images/image_prompts.json` / `image_prompts.md`, place files under `project/images/<filename>`, and update manifest statuses.
 
 ## Compatibility Boundary
 
@@ -57,7 +58,8 @@ python3 skills/ppt-master/scripts/project_manager.py validate <project_path>
 
 # Image tools and SVG quality check
 python3 skills/ppt-master/scripts/analyze_images.py <project_path>/images
-# In-pipeline AI image generation — manifest mode (required, even for 1 image):
+# In Codex sessions, in-pipeline AI images use host-native image generation by default.
+# For non-Codex/API backend runs, use manifest mode (required, even for 1 image):
 python3 skills/ppt-master/scripts/image_gen.py --manifest <project_path>/images/image_prompts.json
 python3 skills/ppt-master/scripts/image_gen.py --render-md <project_path>/images/image_prompts.json
 # Out-of-pipeline one-off / debug / single-image fixup only (no manifest, no sidecar):
